@@ -115,9 +115,9 @@ fn pairs<'a, T, U, M: Monad>(l: &'a M::App<T>, r: &'a M::App<U>) -> M::App<(&'a 
 // hey, it works!
 // (arrow notation anyone...?)
 macro_rules! mdo{
-    ($t:ty | $i:ident <-- $e:expr; $($k:tt)*) => { <$t>::bind_ref($e, |$i| mdo!( $t | $($k)* ) ) };
-    ($t:ty | $i:ident <~~ $e:expr; $($k:tt)*) => { <$t>::bind_once($e, |$i| mdo!( $t | $($k)* ) ) };
-    ($t:ty | $i:ident <<- $e:expr; $($k:tt)*) => { <$t>::bind_dyn($e, |$i| mdo!( $t | $($k)* ) ) };
+    ($t:ty | let! &$i:ident = $e:expr; $($k:tt)*) => { <$t>::bind_ref($e, |$i| mdo!( $t | $($k)* ) ) };
+    ($t:ty | let! $i:ident = $e:expr; $($k:tt)*) => { <$t>::bind_once($e, |$i| mdo!( $t | $($k)* ) ) };
+    ($t:ty | let! &dyn $i:ident = $e:expr; $($k:tt)*) => { <$t>::bind_dyn($e, |$i| mdo!( $t | $($k)* ) ) };
     ($t:ty | let $i:ident = $e:expr; $($k:tt)*) => { { let $i = $e; mdo!( $t | $($k)* ) } };
     ($t:ty | pure $e:expr) => { <$t>::pure($e) };
     ($t:ty | $e:expr) => { $e };
@@ -125,16 +125,16 @@ macro_rules! mdo{
 
 fn pairs_<'a, T, U, M: Monad>(l: &'a M::App<T>, r: &'a M::App<U>) -> M::App<(&'a T, &'a U)>{
     mdo!{ M |
-        x <-- l;
-        y <-- r;
+        let! &x = l;
+        let! &y = r;
         pure (x, y)
     }
 }
 
 fn pairs_own<T, U, M: MonadOnce>(l: M::App<T>, r: M::App<U>) -> M::App<(T, U, i32)>{
     mdo!{ M |
-        x <~~ l;
-        y <~~ r;
+        let! x = l;
+        let! y = r;
         let k = 1;
         pure (x, y, k)
     }
@@ -142,9 +142,9 @@ fn pairs_own<T, U, M: MonadOnce>(l: M::App<T>, r: M::App<U>) -> M::App<(T, U, i3
 
 fn dsts(f: &Box<dyn Fn(i32) -> i32>, i: &Box<i32>, f2: Box<fn(i32) -> i32>) -> Box<i32>{
     mdo!{ Boxes |
-        fxo <~~ f2;
-        fx <<- f;
-        ix <-- i;
+        let! fxo = f2;
+        let! &dyn fx = f;
+        let! &ix = i;
         pure fxo(fx(*ix))
     }
 }
